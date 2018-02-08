@@ -30,3 +30,5 @@ optional arguments:
   --outfile OUTFILE     Name of file for results
   --name NAME           Name of the model
 ```
+
+You can see the Kaggle seed identification challenge [here](https://www.kaggle.com/c/plant-seedlings-classification). 

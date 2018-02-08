@@ -8,7 +8,7 @@ from keras.applications.resnet50 import ResNet50
 from keras.applications.densenet import DenseNet121
 from keras.callbacks import (EarlyStopping, ModelCheckpoint, ReduceLROnPlateau,
                              TensorBoard)
-from keras.layers import Dense, Dropout
+from keras.layers import Flatten, Dense, Dropout
 from keras.models import Model, load_model
 from keras.preprocessing.image import ImageDataGenerator
 from keras import optimizers
@@ -56,6 +56,10 @@ def get_model(args):
                            pooling='avg', input_shape=(insize, insize, 3))
 
     x = base_model.output
+
+    if args.base_model == 'densenet':
+        x = Flatten()(x)
+
     x = Dense(256, activation='relu')(x)
     x = Dropout(0.5)(x)
     predictions = Dense(12, activation='softmax')(x)
@@ -83,10 +87,10 @@ def train(args):
     weights_path = '%s/%s.h5' % (save_path, args.name)
     os.makedirs(save_path, exist_ok=True)
 
-    early_stop = EarlyStopping(monitor='val_loss', patience=10, verbose=0)
+    early_stop = EarlyStopping(monitor='val_loss', patience=20, verbose=0)
     checkpoint = ModelCheckpoint(weights_path, monitor='val_loss',
                                  save_best_only=True, verbose=0)
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=4,
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=10,
                                   verbose=0, mode='auto', epsilon=0.0001,
                                   cooldown=0, min_lr=0)
     tensorboard = TensorBoard(write_grads=True, log_dir='logs/%s' % args.name)

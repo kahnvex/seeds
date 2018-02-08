@@ -18,6 +18,8 @@ from PIL import Image
 def get_args():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('--name', type=str, required=True,
+                        help='Name of the model')
     parser.add_argument('--epochs', '-e', type=int, default=20)
     parser.add_argument('--batch-size', '-b', type=int, default=32)
     parser.add_argument('--learning-rate', '-l', type=float, default=0.0001)
@@ -34,8 +36,11 @@ def get_args():
                         help='Input image size')
     parser.add_argument('--outfile', type=str, default='results.csv',
                         help='Name of file for results')
-    parser.add_argument('--name', type=str, required=True,
-                        help='Name of the model')
+    parser.add_argument('--optimizer', type=str, default='adam',
+                        choices=('adam', 'rmsprop', 'adagrad', 'adadelta'),
+                        help='The optimization function to use')
+    parser.add_argument('--pdist', action='store_true', default=False,
+                        help='Output the probability distribution as a CSV')
 
     return parser.parse_args()
 
@@ -49,6 +54,20 @@ def get_base_model(args):
         return DenseNet121
 
 
+def get_optimizer(args):
+    if args.optimizer == 'adam':
+        return optimizers.Adam(lr=args.learning_rate)
+
+    elif args.optimizer == 'rmsprop':
+        return optimizers.RMSprop(lr=args.learning_rate)
+
+    elif args.optimizer == 'adagrad':
+        return optimizers.Adagrad()
+
+    elif args.optimizer == 'adadelta':
+        return optimizers.Adadelta()
+
+
 def get_model(args):
     insize = args.img_size
     BaseModel = get_base_model(args)
@@ -60,13 +79,13 @@ def get_model(args):
     if args.base_model == 'densenet':
         x = Flatten()(x)
 
-    x = Dense(256, activation='relu')(x)
+    x = Dense(512, activation='relu')(x)
     x = Dropout(0.5)(x)
     predictions = Dense(12, activation='softmax')(x)
 
     model = Model(inputs=base_model.input, output=predictions)
     model.compile(loss='categorical_crossentropy',
-                  optimizer=optimizers.Adam(lr=args.learning_rate),
+                  optimizer=get_optimizer(args),
                   metrics=['accuracy'])
     return model
 
@@ -110,7 +129,8 @@ def train(args):
 
 
 def load_pretrained(args):
-    return load_model('%s/%s.h5' % (args.save_path, args.name))
+    path = os.path.normpath('%s/%s.h5' % (args.save_path, args.name))
+    return load_model(path)
 
 
 def test(args, model):
@@ -128,7 +148,22 @@ def test(args, model):
             img = (1./255) * np.array(img)
             pred = model.predict(np.array([img]))[0]
             classname = classes[np.argmax(pred)]
+
             writer.writerow([imgpath, classname])
+
+    if args.pdist:
+        with open('results/%s-pdist.csv' % args.name, 'w') as f:
+            writer = csv.writer(f)
+            header = ['img'] + classes
+            writer.writerow(header)
+
+            for imgpath in os.listdir(testpath):
+                img = Image.open('%s/%s' % (testpath, imgpath))
+                img = img.resize((args.img_size, args.img_size))
+                img = (1./255) * np.array(img)
+                pred = model.predict(np.array([img]))[0]
+
+                writer.writerow([imgpath] + [str(e) for e in pred.tolist()])
 
 
 def main(args):

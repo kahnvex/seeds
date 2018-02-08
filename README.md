@@ -2,7 +2,7 @@
 
 Seed identification Kaggle challenge.
 
-This training and inference script is best described via it's help
+This training and inference script is best described via its help
 dialog and looking at the source code.
 
 ```

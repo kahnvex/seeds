@@ -21,14 +21,21 @@ def get_args():
     parser.add_argument('--epochs', '-e', type=int, default=20)
     parser.add_argument('--batch-size', '-b', type=int, default=32)
     parser.add_argument('--learning-rate', '-l', type=float, default=0.0001)
-    parser.add_argument('--save-path', type=str, default='models/')
+    parser.add_argument('--save-path', type=str, default='models/',
+                        help='Path in which to save the model\'s h5 file')
     parser.add_argument('--base-model', type=str, default='xception',
-                        choices=('xception', 'resnet', 'densenet'))
-    parser.add_argument('--test', action='store_true', default=False)
-    parser.add_argument('--load-model', action='store_true', default=False)
-    parser.add_argument('--img-size', type=int, default=320)
-    parser.add_argument('--outfile', type=str, default='results.csv')
-    parser.add_argument('--name', type=str, required=True)
+                        choices=('xception', 'resnet', 'densenet'),
+                        help='Architecture hyperparameter')
+    parser.add_argument('--test', action='store_true', default=False,
+                        help='Classify the test set')
+    parser.add_argument('--load-model', action='store_true', default=False,
+                        help='Load the model from disk instead of training')
+    parser.add_argument('--img-size', type=int, default=320,
+                        help='Input image size')
+    parser.add_argument('--outfile', type=str, default='results.csv',
+                        help='Name of file for results')
+    parser.add_argument('--name', type=str, required=True,
+                        help='Name of the model')
 
     return parser.parse_args()
 

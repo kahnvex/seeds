@@ -14,6 +14,8 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras import optimizers
 from PIL import Image
 
+from ensemble import MeanEnsemble
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -41,6 +43,8 @@ def get_args():
                         help='The optimization function to use')
     parser.add_argument('--pdist', action='store_true', default=False,
                         help='Output the probability distribution as a CSV')
+    parser.add_argument('--ensemble', nargs='+', default=[],
+                        help='When testing, ensembe 1+ models using mean')
 
     return parser.parse_args()
 
@@ -68,7 +72,7 @@ def get_optimizer(args):
         return optimizers.Adadelta()
 
 
-def get_model(args):
+def get_model(args, n_classes):
     insize = args.img_size
     BaseModel = get_base_model(args)
     base_model = BaseModel(weights='imagenet', include_top=False,
@@ -79,9 +83,9 @@ def get_model(args):
     if args.base_model == 'densenet':
         x = Flatten()(x)
 
-    x = Dense(512, activation='relu')(x)
+    x = Dense(256, activation='relu')(x)
     x = Dropout(0.5)(x)
-    predictions = Dense(12, activation='softmax')(x)
+    predictions = Dense(n_classes, activation='softmax')(x)
 
     model = Model(inputs=base_model.input, output=predictions)
     model.compile(loss='categorical_crossentropy',
@@ -91,6 +95,7 @@ def get_model(args):
 
 
 def train(args):
+    n_classes = len(os.listdir('data/train'))
     img_size = (args.img_size, args.img_size)
     save_path = args.save_path
     datagen = ImageDataGenerator(
@@ -106,7 +111,7 @@ def train(args):
     weights_path = '%s/%s.h5' % (save_path, args.name)
     os.makedirs(save_path, exist_ok=True)
 
-    early_stop = EarlyStopping(monitor='val_loss', patience=20, verbose=0)
+    early_stop = EarlyStopping(monitor='val_loss', patience=30, verbose=0)
     checkpoint = ModelCheckpoint(weights_path, monitor='val_loss',
                                  save_best_only=True, verbose=0)
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=10,
@@ -115,7 +120,7 @@ def train(args):
     tensorboard = TensorBoard(write_grads=True, log_dir='logs/%s' % args.name)
     callbacks = [early_stop, checkpoint, reduce_lr, tensorboard]
 
-    model = get_model(args)
+    model = get_model(args, n_classes)
     train = datagen.flow_from_directory('data/train', target_size=img_size,
                                         batch_size=args.batch_size)
     vald = datagen.flow_from_directory('data/validation',
@@ -129,8 +134,17 @@ def train(args):
 
 
 def load_pretrained(args):
-    path = os.path.normpath('%s/%s.h5' % (args.save_path, args.name))
-    return load_model(path)
+    if not args.ensemble:
+        path = os.path.normpath('%s/%s.h5' % (args.save_path, args.name))
+        return load_model(path)
+
+    models = []
+
+    for modelname in args.ensemble:
+        path = os.path.normpath('%s/%s.h5' % (args.save_path, modelname))
+        models.append(load_model(path))
+
+    return MeanEnsemble(models)
 
 
 def test(args, model):
@@ -152,7 +166,7 @@ def test(args, model):
             writer.writerow([imgpath, classname])
 
     if args.pdist:
-        with open('results/%s-pdist.csv' % args.name, 'w') as f:
+        with open('results/%s_pdist.csv' % args.name, 'w') as f:
             writer = csv.writer(f)
             header = ['img'] + classes
             writer.writerow(header)

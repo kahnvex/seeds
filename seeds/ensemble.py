@@ -6,6 +6,6 @@ class MeanEnsemble:
         self.models = models
 
     def predict(self, X):
-       predictions = np.array([model.predict(X) for model in models])
+        predictions = np.array([model.predict(X) for model in self.models])
 
-       return np.mean(predictions, axis=0)
+        return np.mean(predictions, axis=0)

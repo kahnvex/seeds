@@ -5,7 +5,7 @@ import os
 
 from keras.applications.xception import Xception
 from keras.applications.resnet50 import ResNet50
-from keras.applications.densenet import DenseNet121
+from keras.applications.densenet import DenseNet121, DenseNet169
 from keras.callbacks import (EarlyStopping, ModelCheckpoint, ReduceLROnPlateau,
                              TensorBoard)
 from keras.layers import Flatten, Dense, Dropout
@@ -28,7 +28,8 @@ def get_args():
     parser.add_argument('--save-path', type=str, default='models/',
                         help='Path in which to save the model\'s h5 file')
     parser.add_argument('--base-model', type=str, default='xception',
-                        choices=('xception', 'resnet', 'densenet'),
+                        choices=('xception', 'resnet', 'densenet121',
+                                 'densenet169'),
                         help='Architecture hyperparameter')
     parser.add_argument('--test', action='store_true', default=False,
                         help='Classify the test set')
@@ -54,8 +55,10 @@ def get_base_model(args):
         return Xception
     elif args.base_model == 'resnet':
         return ResNet50
-    elif args.base_model == 'densenet':
+    elif args.base_model == 'densenet121':
         return DenseNet121
+    elif args.base_model == 'densenet169':
+        return DenseNet169
 
 
 def get_optimizer(args):
@@ -80,7 +83,7 @@ def get_model(args, n_classes):
 
     x = base_model.output
 
-    if args.base_model == 'densenet':
+    if args.base_model == 'densenet169' or args.base_model == 'densenet121':
         x = Flatten()(x)
 
     x = Dense(256, activation='relu')(x)

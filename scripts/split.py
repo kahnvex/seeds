@@ -1,3 +1,4 @@
+import time
 import os
 import argparse
 
@@ -25,7 +26,8 @@ def main(args):
 
     for dirty in os.listdir(otrain_dir):
         imgs = os.listdir('%s/%s' % (otrain_dir, dirty))
-        train_imgs, val_imgs = train_test_split(imgs, test_size=val_split)
+        train_imgs, val_imgs = train_test_split(imgs, test_size=val_split,
+                                                random_state=int(time.time()))
         os.makedirs('%s/%s' % (train_dir, dirty), exist_ok=True)
         os.makedirs('%s/%s' % (val_dir, dirty), exist_ok=True)
 
